@@ -1,0 +1,21 @@
+https://stackoverflow.com/questions/10624899/multithreading-a-massive-file-read
+
+https://stackoverflow.com/questions/44734483/read-large-file-multithreaded (Choose this one)
+
+https://stackoverflow.com/questions/9089014/how-to-read-huge-file-in-java-in-chunks-without-being-blocked (naive implementation of above)
+
+Don't read files in  multi-threaded way, that is the worst use case of concurrency.
+Reading in parallel from a spinning disk is never a good idea.
+As, the mechenical head will keep on bouncing when context switch happens. and slows down the things
+
+Rather process the chunks you have read on multiple threads using executor service
+
+Baeldung gems
+https://www.baeldung.com/java-avoid-null-check
+https://www.baeldung.com/jackson-ignore-null-fields
+https://www.baeldung.com/java-iterate-map
+https://www.baeldung.com/java-merge-maps
+https://www.baeldung.com/java-list-split
+https://www.baeldung.com/java-copy-list-to-another
+https://www.baeldung.com/java-read-lines-large-file
+
