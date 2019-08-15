@@ -5,10 +5,7 @@ import BO.Trace;
 import BO.Utils;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,7 +50,7 @@ public class Starter {
         } catch (IOException e) {}
 
 
-        System.out.println("LEN IS "+masterList.size());
+        System.out.println("LEN OF CHUNKS "+masterList.size());
 
         int noOfProcessors = Runtime.getRuntime().availableProcessors();
 
@@ -79,8 +76,13 @@ public class Starter {
 
         Map<String, List<Request>> flattenedTraceIdToRequests = Utils.mergeTraceIdGroups(traceIdToRequestList);
 
-        System.out.println(flattenedTraceIdToRequests.size());
+        String longestTraceId = Collections.max(
+                flattenedTraceIdToRequests.entrySet(),
+                (e1, e2) -> e1.getValue().size() - e2.getValue().size()).getKey();
 
+        int longestTraceLength = flattenedTraceIdToRequests.get(longestTraceId).size();
+        System.out.println("TOTAL Trace Json size "+flattenedTraceIdToRequests.size());
+        System.out.println("TraceId "+longestTraceId+ " is longest with size "+longestTraceLength);
 
         PrintWriter printWriter = new PrintWriter(new FileWriter(outputTrace));
         for(Map.Entry<String, List<Request>> entry: flattenedTraceIdToRequests.entrySet()) {
