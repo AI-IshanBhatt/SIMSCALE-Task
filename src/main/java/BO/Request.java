@@ -1,7 +1,7 @@
 package BO;
 
 import java.sql.Timestamp;
-import java.text.ParseException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,21 +52,17 @@ public class Request {
     @Override
     public String toString() {
         return "Request{" +
-                "startTime=" + startTime +
-                ", endTime=" + endTime +
-                ", traceId='" + traceId + '\'' +
                 ", serviceName='" + serviceName + '\'' +
-                ", oldSpan='" + prevSpan + '\'' +
                 ", newSpan='" + newSpan + '\'' +
                 '}';
     }
 
+    // Create Optional<Request> object from logLine
     public static Optional<Request> parseLine(String logLine) {
         String dateRegex = DATE_UTC_REGEX;
         String traceServiceRegex = TRACE_SERVICE_REGEX;
-        String spanRegex = SPAN_REGEX;
 
-        String logRegex = dateRegex+" "+dateRegex+" "+traceServiceRegex+" "+traceServiceRegex+" "+spanRegex;
+        String logRegex = dateRegex+" "+dateRegex+" "+traceServiceRegex+" "+traceServiceRegex+" "+SPAN_REGEX;
         Pattern p = Pattern.compile(logRegex);
         Matcher m = p.matcher(logLine);
 
@@ -88,4 +84,18 @@ public class Request {
         return Optional.ofNullable(r);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Request request = (Request) o;
+        return Objects.equals(getTraceId(), request.getTraceId()) &&
+                Objects.equals(getServiceName(), request.getServiceName()) &&
+                Objects.equals(getPrevSpan(), request.getPrevSpan());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getTraceId(), getServiceName(), getPrevSpan());
+    }
 }

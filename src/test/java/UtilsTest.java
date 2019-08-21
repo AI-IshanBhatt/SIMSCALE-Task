@@ -18,7 +18,7 @@ public class UtilsTest {
     private static List<Request> requestsWithNull;
 
     @BeforeAll
-    public static void setUpBeforeClass() throws Exception{
+    public static void setUpBeforeClass() {
         requests1 = new ArrayList<>();
         requests1.add(new Request(Timestamp.valueOf("2013-10-23 10:12:35.271"), Timestamp.valueOf("2013-10-23 10:12:35.271"), "t1", "s1", "span1", "span2"));
         requests1.add(new Request(Timestamp.valueOf("2013-10-23 10:12:35.271"), Timestamp.valueOf("2013-10-23 10:12:35.271"), "t1", "s2", "span1", "span2"));

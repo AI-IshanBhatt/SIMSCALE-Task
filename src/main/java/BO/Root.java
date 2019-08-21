@@ -1,6 +1,5 @@
 package BO;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 
 public class Root {
@@ -12,7 +11,7 @@ public class Root {
 
     private final ArrayList<Root> calls;
 
-    public Root(String service, String start, String end, String span, ArrayList<Root> calls) {
+    Root(String service, String start, String end, String span, ArrayList<Root> calls) {
         this.service = service;
         this.start = start;
         this.end = end;

@@ -42,12 +42,14 @@ public class Starter {
                         masterList.add(new ArrayList<>(requests));
                         requests.clear();
                     }
-                } catch (NoSuchElementException e) {} // Pythonic EAFP rather than LBYL
+                } catch (NoSuchElementException e) {} // Ignoring the malformed lines
             }
             // For the remaining chunk
             masterList.add(new ArrayList<>(requests));
             requests.clear();
-        } catch (IOException e) {}
+        } catch (IOException e) {
+            throw new IOException("Raw logs file was not found", e);
+        }
 
 
         System.out.println("LEN OF CHUNKS "+masterList.size());
@@ -78,11 +80,17 @@ public class Starter {
 
         String longestTraceId = Collections.max(
                 flattenedTraceIdToRequests.entrySet(),
-                (e1, e2) -> e1.getValue().size() - e2.getValue().size()).getKey();
+                Comparator.comparingInt(e -> e.getValue().size())).getKey();
 
         int longestTraceLength = flattenedTraceIdToRequests.get(longestTraceId).size();
+        Double averageTraceSize = flattenedTraceIdToRequests
+                .entrySet()
+                .stream()
+                .collect(Collectors.averagingInt(value -> value.getValue().size()));
+
         System.out.println("TOTAL Trace Json size "+flattenedTraceIdToRequests.size());
         System.out.println("TraceId "+longestTraceId+ " is longest with size "+longestTraceLength);
+        System.out.println("Average trace size "+ averageTraceSize);
 
         PrintWriter printWriter = new PrintWriter(new FileWriter(outputTrace));
         for(Map.Entry<String, List<Request>> entry: flattenedTraceIdToRequests.entrySet()) {
@@ -91,5 +99,6 @@ public class Starter {
             printWriter.println(traceJson);
         }
         printWriter.close();
+
     }
 }

@@ -16,9 +16,9 @@ import static java.util.stream.Collectors.groupingBy;
 
 public class Utils {
 
-    public static final String DATE_UTC_REGEX = "([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*?Z)";
-    public static final String TRACE_SERVICE_REGEX = "([a-zA-Z0-9]*?)";
-    public static final String SPAN_REGEX = "([a-zA-Z0-9]*?)->([a-zA-Z0-9]*)";
+    static final String DATE_UTC_REGEX = "([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*?Z)";
+    static final String TRACE_SERVICE_REGEX = "([a-zA-Z0-9]*?)";
+    static final String SPAN_REGEX = "([a-zA-Z0-9]*?)->([a-zA-Z0-9]*)";
 
     public static Timestamp stringToDateUTC(String date_str) {
         DateFormat df1 = new SimpleDateFormat
@@ -26,7 +26,7 @@ public class Utils {
         DateFormat df2 = new SimpleDateFormat
                 ("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-        Date date = null;
+        Date date;
         Timestamp ts = null;
         try {
             date = df1.parse(date_str);
@@ -46,19 +46,28 @@ public class Utils {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(timestamp);
     }
 
+    /**
+     * Creates Map (traceId -> List of requests) for given list of requests
+     * @param requests  List of request
+     * @return          Grouped by traceId Map
+     */
     public static Map<String, List<Request>> groupByTraceId(List<Request> requests) {
 
-        Map<String, List<Request>> traceGroups = requests.stream().collect(groupingBy(Request::getTraceId));
-        return traceGroups;
+        return requests.stream().collect(groupingBy(Request::getTraceId));
     }
 
+    /**
+     * Merge a list of map into a single map concatinating the lists of the same key(traceId)
+     * @param traceIdToRequestList  List of Map(traceId->List of request)
+     * @return                      Consolidated map of traceId -> List of requests
+     */
     public static Map<String, List<Request>> mergeTraceIdGroups(List<Map<String, List<Request>>> traceIdToRequestList) {
         return traceIdToRequestList.stream().parallel()
                 .flatMap(m -> m.entrySet().stream())
                 .collect(groupingBy(Map.Entry::getKey,
                         Collector.of(
                                 ArrayList::new,  // Supplier
-                                (list, item) -> list.addAll(item.getValue()),  // Consumer
+                                (list, item) -> list.addAll(item.getValue()),  // Accumulator
                                 (left, right) -> {  // Combiner
                                     left.addAll(right);
                                     return left;
@@ -66,7 +75,13 @@ public class Utils {
                         )));
     }
 
-    public static Root makeRoot(Request request, List<Request> requestList) {
+    /**
+     * A recursive function to create a nested Root object from list of requests
+     * @param request       root request(found by findRoot)
+     * @param requestList   list of request corresponding to root request
+     * @return              Root object(nested)
+     */
+    private static Root makeRoot(Request request, List<Request> requestList) {
         String start = timeStampToStr(request.getStartTime());
         String end = timeStampToStr(request.getEndTime());
         String service = request.getServiceName();
@@ -82,11 +97,62 @@ public class Utils {
         return new Root(service, start, end, span, calls);
     }
 
+    /**
+     * Converts request object to it's corresponding Root object
+     * @param request   Request object
+     * @return          Root object
+     */
+    private static Root requestToRoot(Request request) {
+        String start = timeStampToStr(request.getStartTime());
+        String end = timeStampToStr(request.getEndTime());
+        String service = request.getServiceName();
+        String span = request.getNewSpan();
+        ArrayList<Root> calls = new ArrayList<>();
+        return new Root(service, start, end, span, calls);
+    }
 
+    /**
+     * An iterative function to create a nested Root object from list of requests
+     * @param request       root request(found by findRoot)
+     * @param requestList   list of request corresponding to root request
+     * @return              Root object(nested)
+     */
+    public static Root makeRootIter(Request request, List<Request> requestList) {
+        Queue<Request> requestStack = new LinkedList<>();
+        requestStack.add(request);
+        Map<Request, Root> requestRootMap = new HashMap<>();
+        requestRootMap.put(request, requestToRoot(request));
+
+        while (requestStack.size() != 0) {
+            Request popped = requestStack.remove();
+            for(Request r: findChildren(popped, requestList))
+            {
+                Root parent = requestRootMap.get(popped);
+                Root current = requestToRoot(r);
+                parent.getCalls().add(current);
+                requestRootMap.putIfAbsent(r, current);
+                requestStack.add(r);
+            }
+        }
+        return requestRootMap.get(request);
+    }
+
+    /**
+     * From a list of request find the starting point which is a request with oldSpan as null
+     * @param requests  List of request with same traceId
+     * @return          the root/starting of the request
+     */
     public static Request findRoot(List<Request> requests) {
         return requests.stream().filter(request -> request.getPrevSpan().equals("null")).findAny().get();
     }
 
+
+    /**
+     * Find children from the requests based on their new span and sorted by startTime
+     * @param root      The root of the request found by findRoot method
+     * @param requests  List of requests with same traceId
+     * @return          List of root's immediate children sorted by their startTime
+     */
     public static List<Request> findChildren(Request root, List<Request> requests) {
         String newSpan = root.getNewSpan();
         return requests.stream()
@@ -96,6 +162,12 @@ public class Utils {
 
     }
 
+    /**
+     * Converts list of requests with same traceId to nested Trace object
+     * @param traceId   Trace-id string
+     * @param requests  List of requests having trace-id same as traceId
+     * @return          Trace object(N level nested) for traceId
+     */
     public static Trace traceMapToTraceObj(String traceId, List<Request> requests) {
         if(requests.size() == 1)
         {
@@ -108,12 +180,16 @@ public class Utils {
         }
     }
 
+    /**
+     * Converts Trace object to json string which can directly be written into file
+     * @param trace     Nested Trace object
+     * @return          Json representation of Trace object
+     * @throws JsonProcessingException
+     */
     public static String traceToJsonString(Trace trace) throws JsonProcessingException
     {
         ObjectMapper objectMapper = new ObjectMapper();
-        String traceJson = objectMapper.writeValueAsString(trace);
-        return traceJson;
+        return objectMapper.writeValueAsString(trace);
     }
-
 
 }
