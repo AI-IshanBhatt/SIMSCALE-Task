@@ -41,6 +41,7 @@ public class Starter {
                         requests.add(Request.parseLine(lineContent).get());  // Line for this iteration
                         masterList.add(new ArrayList<>(requests));
                         requests.clear();
+//                        System.out.println("A CHUNK HAS BEEN ADDED"); // FIND THE MEMORY USAGE HERE
                     }
                 } catch (NoSuchElementException e) {} // Ignoring the malformed lines
             }
@@ -99,6 +100,6 @@ public class Starter {
             printWriter.println(traceJson);
         }
         printWriter.close();
-
+        System.out.println("WRITING DONE");
     }
 }
